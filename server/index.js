@@ -3,7 +3,8 @@ const cors=require("cors")
 const bodyParser=require("body-parser")
 const mongoose=require("mongoose")
 const dotenv=require("dotenv")
-
+const session=require("express-session")
+const bcrypt=require("bcrypt")
 dotenv.config()
 
 
@@ -11,90 +12,61 @@ dotenv.config()
  const {Schema}=mongoose;
 
 const userSchema=new Schema({
-    name:{type:String,required:true},
-    surname:{type:String,required:true},
-    age:{type:Number,required:true},
-    image:{type:String,required:true}
+    username:{
+        type:String,
+        minLength: [6, 'Must be at least 6, got {VALUE}'],
+        maxLength: 12,
+        required:true},
+    password:{type:String,required:true},
+    
 },{timestamps:true}
 )
 const app=express()
 
-
 //Midleware
 app.use(cors())
 app.use(bodyParser.json())
+app.use(session({
+    secret:"abcd123gf2",
+    resave:false,
+    saveUninitialized:true
+}))
 
 const Users=mongoose.model("users",userSchema)
 
-//Get All Users
-
-app.get("/users",async (req,res)=>{
-    try {
-        const users=await Users.find({})
-        res.send(users)
-    } catch (error) {
-        res.status(500).json({message:error})
-    }
-})
-
-//User get by id
-
-app.get("/users/:id",async (req,res)=>{
-    try {
-        const user=await Users.findById(req.params.id)
-        
-            res.send(user)
-       
-    } catch (error) {
-        res.status(500).json({message:error})
-    }
-})
-
-
-//Add User
-app.post("/users",(req,res)=>{
+//User Register
+app.post("/register",async (req,res)=>{
+   try {
+    const hashedPassword=await bcrypt.hash(req.body.password,10)
     const user=new Users({
-        name:req.body.name,
-        surname:req.body.surname,
-        age:req.body.age,
-        image:req.body.image
+        username:req.body.username,
+        password:hashedPassword
     })
-    user.save()
-    res.send({message:"User Created"})
+    await user.save();
+    res.status(201).send("User Created")
+   } catch (error) {
+    res.status(500).json({message:error})
+   }
+
 })
 
-//User Update
-app.put("/users/:id",async (req,res)=>{
+
+//User Login
+app.post("/login",async (req,res)=>{
     try {
-        const user=await Users.findByIdAndUpdate(req.params.id)
+        const user=await Users.findOne({username:req.body.username})
+        if(user && await bcrypt.compare(req.body.password,user.password)){
+            req.session.userId=user._id
+            res.status(200).json({message:"User sign in"})
+         }
 
-        if(user){
-            user.name=req.body.name,
-            user.surname=req.body.surname,
-            user.age=req.body.age,
-            user.image=req.body.image
 
-            await user.save()
-            res.json(user)
-        }else{
-            res.status(404).json({message:"Not Found"})
-        }
     } catch (error) {
-        res.status(500).json({message:error})
+        res.status(500).send({message:error})
     }
 })
 
-//Delete User
 
-app.delete("/users/:id",async (req,res)=>{
-    try {
-       await Users.findByIdAndDelete(req.params.id)
-        res.status(200).json({message:"User Deleted"})
-        
-    } catch (error) {
-        res.status(500).json({message:error})
-    }
-})
 
 const PORT=process.env.PORT
 const url=process.env.CONNECTION_URL.replace("<password>", process.env.PASSWORD)
