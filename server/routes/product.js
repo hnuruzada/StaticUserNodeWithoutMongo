@@ -6,8 +6,8 @@ const upload=require("../middleware/upload")
 
 router.get("/",productController.getAllProduct)
 router.get("/:id",productController.getProductById)
-router.post("/",upload.single("image"),productController.createProduct)
-router.put("/:id",upload.single("image"),productController.updateProduct)
+router.post("/",upload.array("image",5),productController.createProduct)
+router.put("/:id",upload.array("image",5),productController.updateProduct)
 router.delete("/:id",productController.deleteProduct)
 
 module.exports=router

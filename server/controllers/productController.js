@@ -27,10 +27,10 @@ try {
 
 exports.createProduct=async (req,res)=>{
 try {
+    const {title,price}=req.body
+    const image=req.files.map(file=>file.path)
     const newProduct=new Products({
-        title:req.body.title,
-        price:req.body.price,
-        image:req.file.path
+        title,price,image
     })
     await newProduct.save();
     res.status(201).json({message:"Product created"})
@@ -42,15 +42,17 @@ try {
 
 exports.updateProduct=async (req,res)=>{
 try {
-    const updatedProduct=await Products.findById(req.params.id)
+    const {title,price}=req.body
+    const image=req.files.map(file=>file.path)
+    const updatedProduct=await Products.findByIdAndUpdate(req.params.id)
     if(!updatedProduct){
         res.status(404).json({message:"Not Found"})
     }
-    updatedProduct.title=req.body.title
-    updatedProduct.price=req.body.price
-    if(req.file){
-        updatedProduct.image=req.file.path
-    }
+    
+    updatedProduct.title=title
+    updatedProduct.price=price
+    updatedProduct.image=image
+   
     const saveProduct=await updatedProduct.save()
     res.json(saveProduct)
 
